@@ -1,69 +1,71 @@
 import React from 'react';
-import { CheckCircle2, AlertTriangle, XOctagon, ShieldAlert, WifiOff } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ShieldAlert, Power } from 'lucide-react';
 
 const STATUS_CONFIGS = {
   NORMAL: {
-    label: "Normal Operation",
-    color: "bg-green-500/20 text-green-400 border-green-500/30",
-    glow: "glow-green",
-    bullet: "bg-green-400 shadow-[0_0_8px_#22c55e]",
+    label: "NORMAL STATE",
+    color: "bg-green-500/10 text-green-400 border-green-500/30",
+    glow: "glow-green shadow-[0_0_20px_rgba(34,197,94,0.2)]",
+    bullet: "bg-green-400 shadow-[0_0_8px_#22c55e] animate-pulse",
     icon: CheckCircle2,
-    description: "Grid values are within standard operating specifications (210V - 240V). All outputs are active and monitored."
-  },
-  WARNING: {
-    label: "System Warning",
-    color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    glow: "glow-amber",
-    bullet: "bg-amber-400 shadow-[0_0_8px_#f59e0b]",
-    icon: AlertTriangle,
-    description: "Grid readings are nearing the safety margins. Take caution as auto-tripping limits are approaching."
+    description: "Domestic power quality is normal. Electrical parameters are within nominal safety bounds (200V - 250V AC, load currents 0.1A - 2.0A)."
   },
   OVER_VOLTAGE: {
-    label: "Over Voltage Trip",
-    color: "bg-red-500/20 text-red-400 border-red-500/30",
-    glow: "glow-red",
-    bullet: "bg-red-400 shadow-[0_0_8px_#ef4448]",
+    label: "OVER VOLTAGE FAULT",
+    color: "bg-red-500/10 text-red-400 border-red-500/30",
+    glow: "glow-red shadow-[0_0_20px_rgba(239,68,68,0.35)]",
+    bullet: "bg-red-500 shadow-[0_0_10px_#ef4444] animate-ping",
     icon: ShieldAlert,
-    description: "Voltage has exceeded the maximum limit (>250V). Protection relay deactivated output load."
+    description: "Grid potential has crossed the critical threshold (>250V). Auto-tripping isolated the domestic loads."
   },
   UNDER_VOLTAGE: {
-    label: "Under Voltage Trip",
-    color: "bg-red-500/20 text-red-400 border-red-500/30",
-    glow: "glow-red",
-    bullet: "bg-red-400 shadow-[0_0_8px_#ef4448]",
-    icon: ShieldAlert,
-    description: "Voltage has dropped below safe operational levels (<190V). Output isolated to prevent damage."
+    label: "UNDER VOLTAGE FAULT",
+    color: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    glow: "glow-amber shadow-[0_0_20px_rgba(245,158,11,0.3)]",
+    bullet: "bg-amber-400 shadow-[0_0_8px_#f59e0b] animate-pulse",
+    icon: AlertTriangle,
+    description: "Grid voltage has dropped below safe operational levels (<200V). Isolated breaker lines to prevent inductive load damage."
   },
   OVER_CURRENT: {
-    label: "Over Current Trip",
-    color: "bg-red-500/20 text-red-400 border-red-500/30",
-    glow: "glow-red",
-    bullet: "bg-red-400 shadow-[0_0_8px_#ef4448]",
+    label: "OVER CURRENT FAULT",
+    color: "bg-red-500/10 text-red-400 border-red-500/30",
+    glow: "glow-red shadow-[0_0_20px_rgba(239,68,68,0.35)]",
+    bullet: "bg-red-500 shadow-[0_0_10px_#ef4444] animate-ping",
     icon: ShieldAlert,
-    description: "Current consumption has exceeded safety thresholds (>5.0A). Breaker tripped to protect domestic devices."
+    description: "Current draw exceeds safe capacity (>2.0A). breaker deactivated grid line output to prevent overload overheating."
   },
-  FAULT: {
-    label: "Relay Fault State",
-    color: "bg-red-600/20 text-red-400 border-red-600/30",
-    glow: "glow-red",
-    bullet: "bg-red-500 shadow-[0_0_10px_#ef4444]",
-    icon: XOctagon,
-    description: "Protection relay remains OPEN due to system fault. Manual intervention / reset command required to restore power."
+  UNDER_CURRENT: {
+    label: "UNDER CURRENT FAULT",
+    color: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    glow: "glow-amber shadow-[0_0_20px_rgba(245,158,11,0.3)]",
+    bullet: "bg-amber-400 shadow-[0_0_8px_#f59e0b] animate-pulse",
+    icon: AlertTriangle,
+    description: "Load current has dropped below nominal limits (<0.1A) while system is active. Potential open-circuit or no-load warning."
   },
-  SENSOR_ERROR: {
-    label: "Sensor Failure",
-    color: "bg-gray-800 text-gray-400 border-gray-700",
-    glow: "shadow-[0_0_10px_rgba(107,114,128,0.2)]",
+  POWER_OFF: {
+    label: "POWER OFF",
+    color: "bg-gray-800/50 text-gray-400 border-gray-700/60",
+    glow: "shadow-[0_0_10px_rgba(107,114,128,0.15)]",
     bullet: "bg-gray-500 shadow-[0_0_6px_#6b7280]",
-    icon: WifiOff,
-    description: "Hardware telemetry lost. Error reading from ZMPT101B voltage transformer or ACS712 current sensor."
+    icon: Power,
+    description: "Mains utility grid is completely down (<50V measured). Relay breaker is open. Standard blackout status."
   }
 };
 
 export default function StatusPanel({ status = "NORMAL" }) {
-  // Normalize status string from API format
   let currentStatus = String(status).toUpperCase();
-  if (!STATUS_CONFIGS[currentStatus]) {
+  
+  if (currentStatus.includes("OVER") && currentStatus.includes("VOLT")) {
+    currentStatus = "OVER_VOLTAGE";
+  } else if (currentStatus.includes("UNDER") && currentStatus.includes("VOLT")) {
+    currentStatus = "UNDER_VOLTAGE";
+  } else if (currentStatus.includes("OVER") && currentStatus.includes("CURR")) {
+    currentStatus = "OVER_CURRENT";
+  } else if (currentStatus.includes("UNDER") && currentStatus.includes("CURR")) {
+    currentStatus = "UNDER_CURRENT";
+  } else if (currentStatus.includes("POWER") || currentStatus.includes("OFF")) {
+    currentStatus = "POWER_OFF";
+  } else {
     currentStatus = "NORMAL";
   }
 
@@ -71,59 +73,39 @@ export default function StatusPanel({ status = "NORMAL" }) {
   const Icon = activeConfig.icon;
 
   return (
-    <div className="engineering-card rounded-2xl p-4 md:p-6 border border-gray-800 flex flex-col h-full">
-      <h3 className="text-sm font-bold text-white uppercase tracking-wider text-left mb-4">
-        System Status Panel
-      </h3>
+    <div className="engineering-card rounded-3xl p-6 border border-gray-800 flex flex-col h-full justify-between bg-gray-950/30">
+      
+      <div>
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest text-left mb-3">
+          System State Indicator
+        </h3>
+        <p className="text-[10px] text-gray-500 text-left leading-relaxed mb-6">
+          Displays the active state derived from the ZMPT101B and ACS712 sensors.
+        </p>
+      </div>
 
-      {/* Main Large Active Status Banner */}
-      <div className={`rounded-xl border p-4 mb-5 transition-all duration-500 ${activeConfig.color} ${activeConfig.glow} flex items-start gap-4 text-left`}>
-        <div className="p-2 rounded-lg bg-gray-950/40 border border-current/10">
-          <Icon className="w-6 h-6" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${activeConfig.bullet}`}></span>
-            <h4 className="font-bold text-base">{activeConfig.label}</h4>
+      <div className={`rounded-2xl border p-6 transition-all duration-500 ${activeConfig.color} ${activeConfig.glow} flex flex-col gap-4 text-left`}>
+        
+        <div className="flex items-center justify-between border-b border-current/15 pb-3">
+          <div className="flex items-center gap-2.5">
+            <span className={`w-3 h-3 rounded-full ${activeConfig.bullet}`}></span>
+            <span className="text-xl font-mono font-bold tracking-wider select-all uppercase">
+              {activeConfig.label}
+            </span>
           </div>
-          <p className="text-xs mt-1 text-gray-300 leading-normal font-medium">
+          <Icon className="w-6 h-6 animate-pulse" />
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-200 leading-relaxed font-semibold">
             {activeConfig.description}
           </p>
         </div>
       </div>
-
-      {/* Grid List of Available System Operating Conditions */}
-      <div className="space-y-2 mt-auto">
-        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-left block mb-2">
-          System State Matrix
-        </span>
-        
-        {Object.entries(STATUS_CONFIGS).map(([key, config]) => {
-          const isActive = key === currentStatus;
-          const BadgeIcon = config.icon;
-
-          return (
-            <div
-              key={key}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg border text-left transition-all ${
-                isActive
-                  ? `${config.color} border-current/30 font-bold scale-[1.01]`
-                  : 'bg-gray-900/40 border-gray-800/60 opacity-40 hover:opacity-60 text-gray-500'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isActive ? config.bullet : 'bg-gray-700'}`}></span>
-                <span className="text-xs font-mono tracking-wide">{key}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-sans">
-                  {isActive ? "ACTIVE" : "STANDBY"}
-                </span>
-                <BadgeIcon className="w-3.5 h-3.5" />
-              </div>
-            </div>
-          );
-        })}
+      
+      <div className="mt-6 pt-4 border-t border-gray-900 flex items-center justify-between text-[10px] font-mono text-gray-500">
+        <span>GRID MONITORING TELEMETRY STATE</span>
+        <span className="font-bold text-gray-400">{currentStatus}</span>
       </div>
     </div>
   );

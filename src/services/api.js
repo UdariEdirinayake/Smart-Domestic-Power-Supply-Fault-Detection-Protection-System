@@ -5,43 +5,55 @@
 // Keep simulation state persistent across requests
 let simState = {
   voltage: 228.5,
-  current: 1.80,
-  power: 397.4,
-  frequency: 50.0,
-  relay: true,
+  current: 1.20,
+  relay_status: true,
   status: "NORMAL",
-  faultCount: 0,
-  lastFaultTime: null,
-  timestamp: new Date().toISOString(),
-  sensorHealth: {
-    ZMPT101B: "online",
-    ACS712: "online",
-    ESP32: "online"
-  }
+  timestamp: new Date().toISOString()
 };
 
 // Internal timer to simulate natural fluctuations
 let ticks = 0;
 let faultDuration = 0;
-let currentFaultType = null; // 'OVER_VOLTAGE', 'UNDER_VOLTAGE', 'OVER_CURRENT', 'SENSOR_ERROR'
+let currentFaultType = null; // 'OVER_VOLTAGE', 'UNDER_VOLTAGE', 'POWER_OFF', 'OVER_CURRENT', 'UNDER_CURRENT'
 
 /**
  * Triggers a simulated fault for testing and demo purposes
- * @param {string} type - 'OVER_VOLTAGE' | 'UNDER_VOLTAGE' | 'OVER_CURRENT' | 'SENSOR_ERROR'
  */
 export const triggerSimulatedFault = (type) => {
   currentFaultType = type;
-  faultDuration = 5; // Fault lasts for 5 seconds
+  faultDuration = 6; // Fault lasts for 6 seconds
 };
 
 /**
- * Reset faults and reset relay back to ON
+ * Reset faults and restore system
  */
 export const resetSimulatedSystem = () => {
-  simState.relay = true;
+  simState.relay_status = true;
   simState.status = "NORMAL";
   currentFaultType = null;
   faultDuration = 0;
+};
+
+/**
+ * Evaluates the system status based on threshold rules:
+ * - Overvoltage: > 250 V
+ * - Undervoltage: < 200 V (but >= 50 V)
+ * - Power OFF: < 50 V
+ * - Overcurrent: > 2 A
+ * - Undercurrent: < 0.1 A
+ * - Normal: 200V - 250V and 0.1A - 2A
+ */
+export const getSystemStatus = (voltage, current, relayStatus) => {
+  if (!relayStatus) {
+    if (voltage < 50) return "POWER_OFF";
+    return "FAULT";
+  }
+  if (voltage < 50) return "POWER_OFF";
+  if (voltage > 250) return "OVER_VOLTAGE";
+  if (voltage < 200) return "UNDER_VOLTAGE";
+  if (current > 2.0) return "OVER_CURRENT";
+  if (current < 0.1) return "UNDER_CURRENT";
+  return "NORMAL";
 };
 
 /**
@@ -54,145 +66,68 @@ const updateSimulation = () => {
     faultDuration--;
     
     if (currentFaultType === 'OVER_VOLTAGE') {
-      simState.voltage = parseFloat((260.0 + Math.random() * 10).toFixed(1));
-      simState.current = parseFloat((1.5 + Math.random() * 0.5).toFixed(2));
-      simState.status = "OVER_VOLTAGE";
+      simState.voltage = parseFloat((255.0 + Math.random() * 8).toFixed(1));
+      simState.current = parseFloat((1.2 + Math.random() * 0.4).toFixed(2));
       if (faultDuration < 4) {
-        simState.relay = false;
-        simState.status = "FAULT";
+        simState.relay_status = false;
       }
     } else if (currentFaultType === 'UNDER_VOLTAGE') {
-      simState.voltage = parseFloat((170.0 - Math.random() * 10).toFixed(1));
-      simState.current = parseFloat((0.8 + Math.random() * 0.3).toFixed(2));
-      simState.status = "UNDER_VOLTAGE";
+      simState.voltage = parseFloat((175.0 - Math.random() * 8).toFixed(1));
+      simState.current = parseFloat((0.6 + Math.random() * 0.2).toFixed(2));
       if (faultDuration < 4) {
-        simState.relay = false;
-        simState.status = "FAULT";
+        simState.relay_status = false;
       }
-    } else if (currentFaultType === 'OVER_CURRENT') {
-      simState.voltage = parseFloat((224.0 + Math.random() * 4).toFixed(1));
-      simState.current = parseFloat((6.2 + Math.random() * 1.5).toFixed(2));
-      simState.status = "OVER_CURRENT";
-      if (faultDuration < 4) {
-        simState.relay = false;
-        simState.status = "FAULT";
-      }
-    } else if (currentFaultType === 'SENSOR_ERROR') {
-      simState.voltage = 0.0;
+    } else if (currentFaultType === 'POWER_OFF') {
+      simState.voltage = parseFloat((15.0 + Math.random() * 5).toFixed(1));
       simState.current = 0.0;
-      simState.status = "SENSOR_ERROR";
-      simState.sensorHealth.ZMPT101B = Math.random() > 0.5 ? "offline" : "online";
-      simState.sensorHealth.ACS712 = Math.random() > 0.5 ? "offline" : "online";
-    }
-
-    if (faultDuration === 3) {
-      simState.faultCount += 1;
-      simState.lastFaultTime = new Date().toISOString();
+      simState.relay_status = false;
+    } else if (currentFaultType === 'OVER_CURRENT') {
+      simState.voltage = parseFloat((222.0 + Math.random() * 3).toFixed(1));
+      simState.current = parseFloat((2.5 + Math.random() * 0.8).toFixed(2));
+      if (faultDuration < 4) {
+        simState.relay_status = false;
+      }
+    } else if (currentFaultType === 'UNDER_CURRENT') {
+      simState.voltage = parseFloat((228.0 + Math.random() * 2).toFixed(1));
+      simState.current = parseFloat((0.02 + Math.random() * 0.03).toFixed(3));
     }
   } else {
     currentFaultType = null;
-    simState.sensorHealth.ZMPT101B = "online";
-    simState.sensorHealth.ACS712 = "online";
-    simState.sensorHealth.ESP32 = "online";
+    simState.relay_status = true;
 
-    if (simState.relay) {
-      const baseVoltage = 230.0;
-      const wave = Math.sin(ticks * 0.1) * 3;
-      const noise = (Math.random() - 0.5) * 1.5;
-      simState.voltage = parseFloat((baseVoltage + wave + noise).toFixed(1));
+    const baseVoltage = 228.0;
+    const wave = Math.sin(ticks * 0.1) * 4;
+    const noise = (Math.random() - 0.5) * 1.5;
+    simState.voltage = parseFloat((baseVoltage + wave + noise).toFixed(1));
 
-      const loadFactor = 1.0 + Math.sin(ticks * 0.05) * 0.5;
-      const baseCurrent = 1.6;
-      const currentNoise = (Math.random() - 0.5) * 0.2;
-      simState.current = parseFloat((baseCurrent * loadFactor + currentNoise).toFixed(2));
-
-      simState.frequency = parseFloat((50.0 + (Math.random() - 0.5) * 0.08).toFixed(2));
-
-      const powerFactor = 0.95;
-      simState.power = parseFloat((simState.voltage * simState.current * powerFactor).toFixed(1));
-
-      if (simState.voltage > 240.0 || simState.voltage < 210.0 || simState.current > 4.0) {
-        simState.status = "WARNING";
-      } else {
-        simState.status = "NORMAL";
-      }
-    } else {
-      const baseVoltage = 230.0;
-      simState.voltage = parseFloat((baseVoltage + (Math.random() - 0.5) * 1.5).toFixed(1));
-      simState.current = 0.0;
-      simState.power = 0.0;
-      simState.frequency = parseFloat((50.0 + (Math.random() - 0.5) * 0.04).toFixed(2));
-      simState.status = "FAULT";
-    }
+    const baseCurrent = 0.9;
+    const currentNoise = (Math.random() - 0.5) * 0.3;
+    simState.current = parseFloat((baseCurrent + Math.sin(ticks * 0.05) * 0.4 + currentNoise).toFixed(2));
   }
 
+  simState.status = getSystemStatus(simState.voltage, simState.current, simState.relay_status);
   simState.timestamp = new Date().toISOString();
+  
   return { ...simState };
 };
 
 /**
- * Parses raw Firebase database payload to extract telemetry fields
- */
-const parseFirebaseData = (data) => {
-  if (!data) return null;
-  
-  // 1. Check if root contains the required fields directly
-  if ('voltage' in data && 'current' in data) {
-    return data;
-  }
-  
-  // 2. Check common nesting wrappers like "Data", "telemetry", "sensor", "ESP32"
-  const potentialKeys = ['Data', 'data', 'telemetry', 'sensor', 'esp32', 'status_data'];
-  for (const key of potentialKeys) {
-    if (data[key] && typeof data[key] === 'object' && 'voltage' in data[key]) {
-      return data[key];
-    }
-  }
-
-  // 3. Fallback: check if we see "esp32_test" connectivity
-  if (data.esp32_test) {
-    const isOnline = data.esp32_test.status === "ONLINE";
-    return {
-      voltage: 230.0, // Default reference voltage for demo
-      current: 0.0,
-      power: 0.0,
-      frequency: 50.0,
-      relay: true,
-      status: "NORMAL",
-      faultCount: 0,
-      timestamp: new Date().toISOString(),
-      sensorHealth: {
-        ZMPT101B: "online",
-        ACS712: "online",
-        ESP32: isOnline ? "online" : "offline"
-      }
-    };
-  }
-
-  return null;
-};
-
-/**
  * Fetches real-time power data from selected source.
- * @param {string} mode - 'simulated' | 'local' | 'firebase'
- * @param {string} connectionString - ESP32 IP (for local) or Firebase REST URL
- * @returns {Promise<Object>} Telemetry data payload.
  */
 export const fetchPowerData = async (mode = 'simulated', connectionString = "") => {
   if (mode === 'simulated') {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 80));
     return updateSimulation();
   }
 
   if (mode === 'firebase') {
-    // Standard Firebase URL format: https://[db-name].firebasedatabase.app/
     let dbUrl = connectionString.trim() || "https://domestic-wiring-project-default-rtdb.asia-southeast1.firebasedatabase.app/";
     if (!dbUrl.endsWith('/')) dbUrl += '/';
-    const fetchUrl = `${dbUrl}.json`;
+    const fetchUrl = `${dbUrl}esp32_test.json`;
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       
       const response = await fetch(fetchUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -201,43 +136,36 @@ export const fetchPowerData = async (mode = 'simulated', connectionString = "") 
         throw new Error(`Firebase status code: ${response.status}`);
       }
 
-      const rawData = await response.json();
-      const parsed = parseFirebaseData(rawData);
+      const parsed = await response.json();
 
-      if (!parsed) {
-        throw new Error("No telemetry schema detected in Firebase payload.");
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error("No data found under /esp32_test in Firebase RTDB.");
       }
 
+      const voltageVal = parseFloat(parsed.voltage ?? 0.0);
+      const currentVal = parseFloat(parsed.current ?? 0.0);
+      const relayStatusVal = parsed.relay_status === undefined ? true : !!parsed.relay_status;
+
       return {
-        voltage: parseFloat(parsed.voltage ?? 0.0),
-        current: parseFloat(parsed.current ?? 0.0),
-        power: parseFloat(parsed.power ?? 0.0),
-        frequency: parseFloat(parsed.frequency ?? 50.0),
-        relay: parsed.relay === undefined ? true : !!parsed.relay,
-        status: String(parsed.status ?? "NORMAL").toUpperCase(),
-        faultCount: parseInt(parsed.faultCount ?? 0, 10),
-        timestamp: parsed.timestamp ?? new Date().toISOString(),
-        sensorHealth: parsed.sensorHealth ?? {
-          ZMPT101B: "online",
-          ACS712: "online",
-          ESP32: "online"
-        }
+        voltage: voltageVal,
+        current: currentVal,
+        relay_status: relayStatusVal,
+        status: getSystemStatus(voltageVal, currentVal, relayStatusVal),
+        timestamp: new Date().toISOString()
       };
     } catch (error) {
       console.error("Firebase Telemetry Fetch Failed:", error);
       return {
-        ...simState,
-        status: "SENSOR_ERROR",
-        sensorHealth: {
-          ZMPT101B: "no_data",
-          ACS712: "no_data",
-          ESP32: "offline"
-        }
+        voltage: 0.0,
+        current: 0.0,
+        relay_status: false,
+        status: "POWER_OFF",
+        timestamp: new Date().toISOString(),
+        error: true
       };
     }
   }
 
-  // Local ESP32 mode
   const targetIp = connectionString.trim() || "192.168.4.1";
   const url = `http://${targetIp}/api/data`;
 
@@ -253,66 +181,47 @@ export const fetchPowerData = async (mode = 'simulated', connectionString = "") 
     }
 
     const data = await response.json();
+    const v = parseFloat(data.voltage ?? 0.0);
+    const i = parseFloat(data.current ?? 0.0);
+    const r = data.relay_status === undefined ? !!data.relay : !!data.relay_status;
+
     return {
-      voltage: parseFloat(data.voltage ?? 0),
-      current: parseFloat(data.current ?? 0),
-      power: parseFloat(data.power ?? 0),
-      frequency: parseFloat(data.frequency ?? 50),
-      relay: !!data.relay,
-      status: String(data.status ?? "NORMAL").toUpperCase(),
-      faultCount: parseInt(data.faultCount ?? 0, 10),
-      timestamp: data.timestamp ?? new Date().toISOString(),
-      sensorHealth: data.sensorHealth ?? {
-        ZMPT101B: "online",
-        ACS712: "online",
-        ESP32: "online"
-      }
+      voltage: v,
+      current: i,
+      relay_status: r,
+      status: getSystemStatus(v, i, r),
+      timestamp: new Date().toISOString()
     };
   } catch (error) {
     console.error("Local ESP32 Fetch Failed:", error);
     return {
-      ...simState,
-      status: "SENSOR_ERROR",
-      sensorHealth: {
-        ZMPT101B: "no_data",
-        ACS712: "no_data",
-        ESP32: "offline"
-      }
+      voltage: 0.0,
+      current: 0.0,
+      relay_status: false,
+      status: "POWER_OFF",
+      timestamp: new Date().toISOString(),
+      error: true
     };
   }
 };
 
 /**
  * Triggers ESP32 Relay or updates simulated state.
- * @param {string} mode - 'simulated' | 'local' | 'firebase'
- * @param {string} connectionString - Gateway URL / IP
- * @param {boolean} state - Target relay state (true = ON, false = OFF)
  */
 export const toggleRelay = async (mode = 'simulated', connectionString = "", state) => {
   if (mode === 'simulated') {
     await new Promise(resolve => setTimeout(resolve, 200));
-    simState.relay = state;
-    simState.status = state ? "NORMAL" : "FAULT";
-    return { success: true, relay: simState.relay };
+    simState.relay_status = state;
+    simState.status = getSystemStatus(simState.voltage, simState.current, state);
+    return { success: true, relay_status: simState.relay_status };
   }
 
   if (mode === 'firebase') {
     let dbUrl = connectionString.trim() || "https://domestic-wiring-project-default-rtdb.asia-southeast1.firebasedatabase.app/";
     if (!dbUrl.endsWith('/')) dbUrl += '/';
-    
-    // We write to both the root and child paths to be safe
-    // Since Firebase REST API PUT/PATCH edits state directly
-    const patchUrl = `${dbUrl}.json`;
+    const patchUrl = `${dbUrl}esp32_test.json`;
     const dataPatch = {
-      // Patch at root
-      relay: state,
-      status: state ? "NORMAL" : "FAULT",
-      // Patch under nested "Data" path
-      Data: {
-        relay: state,
-        status: state ? "NORMAL" : "FAULT",
-        timestamp: new Date().toISOString()
-      }
+      relay_status: state
     };
 
     try {
@@ -323,17 +232,16 @@ export const toggleRelay = async (mode = 'simulated', connectionString = "", sta
       });
 
       if (!response.ok) {
-        throw new Error(`Firebase PUT/PATCH error: ${response.status}`);
+        throw new Error(`Firebase PATCH error: ${response.status}`);
       }
 
-      return { success: true, relay: state };
+      return { success: true, relay_status: state };
     } catch (error) {
       console.error("Firebase Relay Control Failed:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // Local ESP32 control
   const targetIp = connectionString.trim() || "192.168.4.1";
   const url = `http://${targetIp}/api/relay`;
 
@@ -341,15 +249,15 @@ export const toggleRelay = async (mode = 'simulated', connectionString = "", sta
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ relay: state })
+      body: JSON.stringify({ relay_status: state })
     });
 
     if (!response.ok) {
-      throw new Error(`Relay control status: ${response.status}`);
+      throw new Error(`Relay status: ${response.status}`);
     }
 
     const result = await response.json();
-    return { success: true, relay: result.relay ?? state };
+    return { success: true, relay_status: result.relay_status ?? state };
   } catch (error) {
     console.error("Local Relay Control Failed:", error);
     return { success: false, error: error.message };

@@ -1,95 +1,96 @@
 import React from 'react';
+import { ShieldAlert } from 'lucide-react';
 
-function CircularGauge({
+function DesignGauge({
   value,
   min = 0,
   max = 100,
   title,
   unit,
-  colorGradientId,
-  normalRangeStart,
-  normalRangeEnd,
-  thresholds = []
+  normalColor = "#10b981", 
+  glowClass = "glow-green",
+  alertState = "none",
+  thresholdText = ""
 }) {
-  // SVG parameters
-  const size = 200;
-  const radius = 70;
-  const strokeWidth = 14;
+  const size = 220;
+  const radius = 80;
+  const strokeWidth = 16;
   const center = size / 2;
-  const circumference = 2 * Math.PI * radius; // ~439.82
+  const circumference = 2 * Math.PI * radius; 
+  const arcLength = circumference * 0.75; 
   
-  // We want a 270-degree gauge (3/4 of a circle)
-  // 90 degrees gap at the bottom
-  const arcLength = circumference * 0.75; // ~329.87
-  const gapLength = circumference * 0.25; // ~109.95
-
-  // Map value to percentage between min and max
   const clampedValue = Math.min(Math.max(value, min), max);
   const percentage = (clampedValue - min) / (max - min);
-  
-  // Calculate dash offset: when percentage is 0, offset is arcLength (empty). When 1, offset is 0 (full).
   const strokeDashoffset = arcLength * (1 - percentage);
-
-  // Rotation to align the 270 degree arc symmetrically (gap at the bottom)
-  // Circle starts at 3 o'clock (0 rad). A 270 arc starts at 135 deg and sweeps to 405 deg.
-  // Transforming by rotating -225 deg (or 135 deg) puts the gap exactly at the bottom.
+  
   const rotation = 135; 
-
-  // Determine current zone color for value reading
-  let textGlow = "text-white";
-  if (value > normalRangeEnd) {
-    textGlow = "text-red-400 text-shadow-glow-red";
-  } else if (value < normalRangeStart && value > 50) {
-    textGlow = "text-blue-400 text-shadow-glow-blue";
-  } else if (value > 0) {
-    textGlow = "text-green-400 text-shadow-glow-green";
-  }
-
-  // Calculate needle rotation angle (from -135 to +135 deg, totaling 270 deg)
   const needleAngle = (percentage * 270) - 135;
 
-  return (
-    <div className="engineering-card rounded-2xl p-6 border border-gray-800 flex flex-col items-center justify-center relative overflow-hidden">
-      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 self-start">{title} Meter</h3>
-      
-      <div className="relative w-[180px] h-[180px] flex items-center justify-center">
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="transform -rotate-90 select-none">
-          <defs>
-            {/* Voltage/Current Color Gradient */}
-            <linearGradient id={colorGradientId} x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#3b82f6" /> {/* Blue - Low */}
-              <stop offset="50%" stopColor="#22c55e" /> {/* Green - Normal */}
-              <stop offset="85%" stopColor="#eab308" /> {/* Yellow - Warning */}
-              <stop offset="100%" stopColor="#ef4444" /> {/* Red - Fault */}
-            </linearGradient>
+  let trackColor = "#1e293b";
+  let activeStroke = normalColor;
+  let textClass = "text-white";
+  let glowStyle = glowClass;
+  let isAlertActive = alertState !== "none";
 
-            {/* Glowing radial drop shadow filter */}
-            <filter id="glow-filter" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="5" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
+  if (alertState === "danger") {
+    activeStroke = "#ef4444"; 
+    textClass = "text-shadow-glow-red text-red-400";
+    glowStyle = "glow-red border-red-500/40 bg-red-950/5";
+  } else if (alertState === "warning") {
+    activeStroke = "#f59e0b"; 
+    textClass = "text-shadow-glow-amber text-amber-400";
+    glowStyle = "glow-amber border-amber-500/40 bg-amber-950/5";
+  } else if (alertState === "off") {
+    activeStroke = "#6b7280"; 
+    textClass = "text-gray-400";
+    glowStyle = "border-gray-800 bg-gray-950/10";
+  }
+
+  return (
+    <div className={`engineering-card rounded-3xl p-6 border transition-all duration-500 flex flex-col items-center justify-center relative overflow-hidden ${isAlertActive ? glowStyle : 'border-gray-800 bg-gray-950/40'}`}>
+      
+      {isAlertActive && (
+        <div className={`absolute top-0 inset-x-0 py-1 text-[10px] font-bold font-mono tracking-widest text-center flex items-center justify-center gap-1.5 ${
+          alertState === "danger" ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
+        }`}>
+          <ShieldAlert className="w-3.5 h-3.5 animate-pulse" />
+          <span>{alertState === "danger" ? "SAFETY FAULT ENGAGED" : "LIMIT WARNING"}</span>
+        </div>
+      )}
+
+      <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mt-2 mb-4">{title}</h3>
+      
+      <div className="relative w-[200px] h-[200px] flex items-center justify-center select-none">
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="transform -rotate-90">
+          <defs>
+            <radialGradient id="alertGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#ef4444" stopOpacity={0.15} />
+              <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+            </radialGradient>
           </defs>
 
-          {/* Background Track Arc */}
+          {alertState === "danger" && (
+            <circle cx={center} cy={center} r={radius} fill="url(#alertGlow)" />
+          )}
+
           <circle
             cx={center}
             cy={center}
             r={radius}
             fill="transparent"
-            stroke="#1f2937"
+            stroke={trackColor}
             strokeWidth={strokeWidth}
             strokeDasharray={`${arcLength} ${circumference}`}
             strokeLinecap="round"
             transform={`rotate(${rotation} ${center} ${center})`}
           />
 
-          {/* Active Colored Measurement Value Arc */}
           <circle
             cx={center}
             cy={center}
             r={radius}
             fill="transparent"
-            stroke={`url(#${colorGradientId})`}
+            stroke={activeStroke}
             strokeWidth={strokeWidth}
             strokeDasharray={`${arcLength} ${circumference}`}
             strokeDashoffset={strokeDashoffset}
@@ -98,12 +99,11 @@ function CircularGauge({
             className="transition-all duration-500 ease-out"
           />
 
-          {/* Subtle tick marks around the gauge */}
-          {[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1].map((tickPercent, idx) => {
-            const tickAngle = (tickPercent * 270) - 135 - 90; // Align with -135deg starting angle
+          {[0, 0.25, 0.5, 0.75, 1].map((tickPercent, idx) => {
+            const tickAngle = (tickPercent * 270) - 135 - 90;
             const angleRad = (tickAngle * Math.PI) / 180;
-            const rStart = radius - 8;
-            const rEnd = radius - strokeWidth / 2;
+            const rStart = radius - 10;
+            const rEnd = radius - 2;
             const x1 = center + rStart * Math.cos(angleRad);
             const y1 = center + rStart * Math.sin(angleRad);
             const x2 = center + rEnd * Math.cos(angleRad);
@@ -115,69 +115,92 @@ function CircularGauge({
                 y1={y1}
                 x2={x2}
                 y2={y2}
-                stroke="#4b5563"
-                strokeWidth="1.5"
+                stroke={isAlertActive ? activeStroke : "#4b5563"}
+                strokeWidth={idx % 2 === 0 ? "2.5" : "1.5"}
               />
             );
           })}
         </svg>
 
-        {/* Center Display Readings */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pt-4">
-          <span className={`text-3xl font-mono font-bold tracking-tight ${textGlow} transition-all duration-300`}>
-            {value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
-          </span>
-          <span className="text-xs font-semibold text-gray-500 font-mono mt-0.5 tracking-wider uppercase">
-            {unit}
-          </span>
-        </div>
-
-        {/* High-tech Analog Needle Indicator */}
         <div 
-          className="absolute w-2 h-20 bottom-1/2 left-[calc(50%-4px)] origin-bottom transition-all duration-500 ease-out pointer-events-none"
+          className="absolute w-2 h-24 bottom-1/2 left-[calc(50%-4px)] origin-bottom transition-all duration-500 ease-out pointer-events-none"
           style={{ transform: `rotate(${needleAngle}deg)` }}
         >
-          {/* Needle Shaft */}
-          <div className="w-[2px] h-[72px] bg-red-500 mx-auto rounded-full shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-          {/* Needle Base Circle */}
-          <div className="w-[10px] h-[10px] bg-red-500 rounded-full border border-gray-900 absolute bottom-[-5px] left-[-1px] shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+          <div className={`w-[2.5px] h-[84px] mx-auto rounded-full ${
+            alertState === "danger" ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]' : alertState === "warning" ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)]' : 'bg-gray-300'
+          }`}></div>
+          <div className={`w-3.5 h-3.5 rounded-full absolute bottom-[-7px] left-[-3px] border border-gray-900 ${
+            alertState === "danger" ? 'bg-red-500' : alertState === "warning" ? 'bg-amber-500' : 'bg-gray-700'
+          }`}></div>
         </div>
       </div>
 
-      {/* Gauge Limits / Min-Max Labels */}
-      <div className="w-full flex justify-between text-[10px] font-bold font-mono text-gray-500 px-4 mt-2">
-        <span>{min} {unit}</span>
-        <span>{max} {unit}</span>
+      <div className="mt-4 flex flex-col items-center">
+        <div className="flex items-baseline justify-center gap-1.5">
+          <span className={`text-4xl font-mono font-bold tracking-tight ${textClass} transition-all duration-300`}>
+            {value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
+          </span>
+          <span className="text-base font-bold text-gray-400 font-mono tracking-wider">{unit}</span>
+        </div>
+        
+        <span className="text-[10px] font-mono text-gray-500 uppercase mt-2 tracking-widest">
+          {thresholdText}
+        </span>
       </div>
+
     </div>
   );
 }
 
-export default function GaugeMeters({ data }) {
+export default function GaugeMeters({ data, status }) {
   const voltage = data?.voltage ?? 0.0;
   const current = data?.current ?? 0.0;
 
+  const upperStatus = String(status || "").toUpperCase();
+
+  let voltageAlert = "none";
+  let currentAlert = "none";
+
+  if (upperStatus === "POWER_OFF") {
+    voltageAlert = "off";
+    currentAlert = "off";
+  } else {
+    if (upperStatus === "OVER_VOLTAGE") {
+      voltageAlert = "danger";
+    } else if (upperStatus === "UNDER_VOLTAGE") {
+      voltageAlert = "warning";
+    }
+
+    if (upperStatus === "OVER_CURRENT") {
+      currentAlert = "danger";
+    } else if (upperStatus === "UNDER_CURRENT") {
+      currentAlert = "warning";
+    }
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-      <CircularGauge
-        title="AC Line Voltage"
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <DesignGauge
+        title="AC Mains Voltage"
         value={voltage}
         min={0}
         max={300}
         unit="V"
-        colorGradientId="voltageGrad"
-        normalRangeStart={210}
-        normalRangeEnd={245}
+        normalColor="#3b82f6" 
+        glowClass="glow-blue border-blue-500/50"
+        alertState={voltageAlert}
+        thresholdText="Limit: 200V - 250V"
       />
-      <CircularGauge
+      <DesignGauge
         title="Load Current"
         value={current}
-        min={0}
-        max={6}
+        min={0.0}
+        max={4.0} 
         unit="A"
-        colorGradientId="currentGrad"
-        normalRangeStart={0.0}
-        normalRangeEnd={4.5}
+        normalColor="#10b981" 
+        glowClass="glow-green border-green-500/50"
+        alertState={currentAlert}
+        thresholdText="Limit: 0.1A - 2.0A"
       />
     </div>
   );

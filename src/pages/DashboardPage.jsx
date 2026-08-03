@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
 import { useRealTimeData } from '../hooks/useRealTimeData';
 import Header from '../components/Header';
-import MeasurementCards from '../components/MeasurementCards';
 import GaugeMeters from '../components/GaugeMeters';
-import RealTimeGraphs from '../components/RealTimeGraphs';
 import StatusPanel from '../components/StatusPanel';
-import ProtectionPanel from '../components/ProtectionPanel';
-import SensorHealth from '../components/SensorHealth';
-import StatisticsPanel from '../components/StatisticsPanel';
-import EventLog from '../components/EventLog';
 import Footer from '../components/Footer';
 import { Sparkles, RefreshCw, Zap } from 'lucide-react';
 
@@ -19,14 +13,7 @@ export default function DashboardPage() {
     connectionString,
     setConnectionString,
     currentData,
-    history,
     isLoading,
-    isConnecting,
-    stats,
-    resetStats,
-    eventLogs,
-    clearLogs,
-    handleToggleRelay,
     triggerFault,
     restoreSystem
   } = useRealTimeData('simulated', "https://domestic-wiring-project-default-rtdb.asia-southeast1.firebasedatabase.app/");
@@ -44,14 +31,14 @@ export default function DashboardPage() {
         <h2 className="text-white text-sm font-bold tracking-wider uppercase mt-8 animate-pulse">
           Initializing Telemetry Gateway...
         </h2>
-        <p className="text-xs text-gray-500 mt-2">Connecting to sensors and buffering initial logs</p>
+        <p className="text-xs text-gray-500 mt-2">Connecting to sensors and loading visual metrics</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#0b0f19] p-4 md:p-6 flex flex-col justify-between">
-      <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col">
+      <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col justify-center">
         
         {/* Dashboard Header Banner */}
         <Header
@@ -62,9 +49,6 @@ export default function DashboardPage() {
           currentData={currentData}
           restoreSystem={restoreSystem}
         />
-
-        {/* Live Grid Metrics Cards */}
-        <MeasurementCards data={currentData} />
 
         {/* Conditional Simulation Fault Injection Control Board */}
         {mode === 'simulated' && showInjector && (
@@ -84,7 +68,7 @@ export default function DashboardPage() {
             </div>
             
             <p className="text-[11px] text-blue-200/70 mb-3 max-w-2xl leading-normal">
-              Simulate various electrical conditions to test the automatic fault detection thresholds, the isolated relay trip transitions, and the event logs audit trail in real-time.
+              Simulate various electrical conditions to test the automatic threshold calculations and watch the gauges turn red automatically on active faults.
             </p>
 
             <div className="flex flex-wrap gap-2.5">
@@ -92,25 +76,31 @@ export default function DashboardPage() {
                 onClick={() => triggerFault('OVER_VOLTAGE')}
                 className="cursor-pointer bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors"
               >
-                ⚡ VOLTAGE SPIKE (&gt;250V)
+                ⚡ OVERVOLTAGE (&gt;250V)
               </button>
               <button
                 onClick={() => triggerFault('UNDER_VOLTAGE')}
-                className="cursor-pointer bg-blue-950/40 hover:bg-blue-900/40 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors"
+                className="cursor-pointer bg-amber-950/40 hover:bg-amber-900/40 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors"
               >
-                📉 BROWNOUT (&lt;190V)
+                📉 UNDERVOLTAGE (&lt;200V)
+              </button>
+              <button
+                onClick={() => triggerFault('POWER_OFF')}
+                className="cursor-pointer bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors"
+              >
+                🔌 POWER OFF (&lt;50V)
               </button>
               <button
                 onClick={() => triggerFault('OVER_CURRENT')}
-                className="cursor-pointer bg-amber-950/40 hover:bg-amber-900/40 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors"
+                className="cursor-pointer bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors"
               >
-                ⚠️ OVERLOAD CURRENT (&gt;5A)
+                ⚠️ OVERCURRENT (&gt;2A)
               </button>
               <button
-                onClick={() => triggerFault('SENSOR_ERROR')}
-                className="cursor-pointer bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors"
+                onClick={() => triggerFault('UNDER_CURRENT')}
+                className="cursor-pointer bg-amber-950/40 hover:bg-amber-900/40 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors"
               >
-                🔌 CUT SENSOR DATA
+                📉 UNDERCURRENT (&lt;0.1A)
               </button>
               <button
                 onClick={restoreSystem}
@@ -134,55 +124,19 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Main Dashboard Layout */}
+        {/* Simplified Dashboard Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
           
-          {/* Left Column - Gauges Meter */}
-          <div className="lg:col-span-2 flex flex-col justify-between">
-            <GaugeMeters data={currentData} />
+          {/* Voltage and Current Circular Gauges Meter (2 Columns) */}
+          <div className="lg:col-span-2">
+            <GaugeMeters data={currentData} status={currentData?.status} />
           </div>
 
-          {/* Right Column - Status Panel */}
+          {/* Active 6-Stage System Status Indicator (1 Column) */}
           <div className="lg:col-span-1">
             <StatusPanel status={currentData?.status} />
           </div>
 
-        </div>
-
-        {/* Scrolling Area Charts */}
-        <RealTimeGraphs history={history} />
-
-        {/* Bottom Section Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-          
-          {/* Protection Circuit Controller Panel */}
-          <div className="lg:col-span-1">
-            <ProtectionPanel
-              relay={currentData?.relay}
-              status={currentData?.status}
-              faultCount={currentData?.faultCount ?? 0}
-              lastFaultTime={currentData?.lastFaultTime}
-              onToggleRelay={handleToggleRelay}
-              isConnecting={isConnecting}
-              isSimulated={mode === 'simulated'}
-            />
-          </div>
-
-          {/* Statistics Report Card */}
-          <div className="lg:col-span-1">
-            <StatisticsPanel stats={stats} onResetStats={resetStats} />
-          </div>
-
-          {/* Sensor Connections Board */}
-          <div className="lg:col-span-1">
-            <SensorHealth sensorHealth={currentData?.sensorHealth} />
-          </div>
-
-        </div>
-
-        {/* System Logs Tabular Log (Full Width) */}
-        <div className="mt-6">
-          <EventLog logs={eventLogs} onClearLogs={clearLogs} />
         </div>
 
         {/* Academic Coursework Footer */}
