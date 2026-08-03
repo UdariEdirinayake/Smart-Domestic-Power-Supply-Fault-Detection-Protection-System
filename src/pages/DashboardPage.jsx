@@ -14,6 +14,8 @@ export default function DashboardPage() {
     setConnectionString,
     currentData,
     isLoading,
+    isConnecting,
+    handleToggleRelay,
     triggerFault,
     restoreSystem
   } = useRealTimeData('simulated', "https://domestic-wiring-project-default-rtdb.asia-southeast1.firebasedatabase.app/");
@@ -38,7 +40,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#0b0f19] p-4 md:p-6 flex flex-col justify-between">
-      <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col justify-center">
+      <div className="max-w-5xl mx-auto w-full flex-grow flex flex-col justify-center">
         
         {/* Dashboard Header Banner */}
         <Header
@@ -124,17 +126,22 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Simplified Dashboard Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
+        {/* Simplified Stacked Dashboard Layout */}
+        <div className="flex flex-col gap-6 mb-6">
           
-          {/* Voltage and Current Circular Gauges Meter (2 Columns) */}
-          <div className="lg:col-span-2">
+          {/* Voltage and Current Circular Gauges Meter (Full Width Row) */}
+          <div className="w-full">
             <GaugeMeters data={currentData} status={currentData?.status} />
           </div>
 
-          {/* Active 6-Stage System Status Indicator (1 Column) */}
-          <div className="lg:col-span-1">
-            <StatusPanel status={currentData?.status} />
+          {/* Active 6-Stage Status & Breaker Control Panel (Full Width Row directly below meters) */}
+          <div className="w-full">
+            <StatusPanel
+              status={currentData?.status}
+              relayStatus={currentData?.relay_status}
+              onToggleRelay={handleToggleRelay}
+              isConnecting={isConnecting}
+            />
           </div>
 
         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, AlertTriangle, ShieldAlert, Power } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ShieldAlert, Power, Loader2 } from 'lucide-react';
 
 const STATUS_CONFIGS = {
   NORMAL: {
@@ -52,7 +52,12 @@ const STATUS_CONFIGS = {
   }
 };
 
-export default function StatusPanel({ status = "NORMAL" }) {
+export default function StatusPanel({
+  status = "NORMAL",
+  relayStatus = true,
+  onToggleRelay,
+  isConnecting = false
+}) {
   let currentStatus = String(status).toUpperCase();
   
   if (currentStatus.includes("OVER") && currentStatus.includes("VOLT")) {
@@ -73,27 +78,18 @@ export default function StatusPanel({ status = "NORMAL" }) {
   const Icon = activeConfig.icon;
 
   return (
-    <div className="engineering-card rounded-3xl p-6 border border-gray-800 flex flex-col h-full justify-between bg-gray-950/30">
+    <div className="engineering-card rounded-3xl p-6 border border-gray-800 flex flex-col md:flex-row gap-6 items-stretch bg-gray-950/30 w-full text-left">
       
-      <div>
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest text-left mb-3">
-          System State Indicator
-        </h3>
-        <p className="text-[10px] text-gray-500 text-left leading-relaxed mb-6">
-          Displays the active state derived from the ZMPT101B and ACS712 sensors.
-        </p>
-      </div>
-
-      <div className={`rounded-2xl border p-6 transition-all duration-500 ${activeConfig.color} ${activeConfig.glow} flex flex-col gap-4 text-left`}>
-        
+      {/* Left: Active 6-Stage System Status Card */}
+      <div className={`flex-1 rounded-2xl border p-5 transition-all duration-500 ${activeConfig.color} ${activeConfig.glow} flex flex-col justify-between gap-4`}>
         <div className="flex items-center justify-between border-b border-current/15 pb-3">
           <div className="flex items-center gap-2.5">
             <span className={`w-3 h-3 rounded-full ${activeConfig.bullet}`}></span>
-            <span className="text-xl font-mono font-bold tracking-wider select-all uppercase">
+            <span className="text-lg font-mono font-bold tracking-wider uppercase">
               {activeConfig.label}
             </span>
           </div>
-          <Icon className="w-6 h-6 animate-pulse" />
+          <Icon className="w-5 h-5 animate-pulse" />
         </div>
 
         <div>
@@ -101,12 +97,55 @@ export default function StatusPanel({ status = "NORMAL" }) {
             {activeConfig.description}
           </p>
         </div>
+
+        <div className="text-[9px] font-mono text-gray-500 uppercase tracking-widest pt-2 border-t border-current/10">
+          State Telemetry: {currentStatus}
+        </div>
       </div>
-      
-      <div className="mt-6 pt-4 border-t border-gray-900 flex items-center justify-between text-[10px] font-mono text-gray-500">
-        <span>GRID MONITORING TELEMETRY STATE</span>
-        <span className="font-bold text-gray-400">{currentStatus}</span>
+
+      {/* Right: Breaker Control Switch Panel */}
+      <div className="w-full md:w-[280px] bg-gray-900/50 border border-gray-800 rounded-2xl p-5 flex flex-col justify-between gap-4">
+        <div>
+          <h4 className="text-xs font-bold text-white uppercase tracking-wider">Breaker Relay Control</h4>
+          <p className="text-[10px] text-gray-500 leading-normal mt-1">
+            Manual output cutoff. Tripped automatically during active grid faults.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {/* Visual Indicator of breaker status */}
+          <div className="flex items-center justify-between px-3 py-2 bg-gray-950 rounded-xl border border-gray-800 font-mono text-xs">
+            <span className="text-gray-500">BREAKER:</span>
+            <span className={`font-bold ${relayStatus ? 'text-green-400' : 'text-red-400 animate-pulse'}`}>
+              {relayStatus ? "CONNECTED (ON)" : "ISOLATED (OFF)"}
+            </span>
+          </div>
+
+          {/* Interactive Toggle Switch Button */}
+          <button
+            onClick={() => onToggleRelay(!relayStatus)}
+            disabled={isConnecting}
+            className={`cursor-pointer w-full py-2.5 rounded-xl font-mono text-xs font-bold border flex items-center justify-center gap-2 transition-all active:scale-98 disabled:opacity-50 ${
+              relayStatus
+                ? 'bg-red-950/20 hover:bg-red-900/20 text-red-400 border-red-500/20'
+                : 'bg-green-950/20 hover:bg-green-900/20 text-green-400 border-green-500/20'
+            }`}
+          >
+            {isConnecting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>COMMUNICATING...</span>
+              </>
+            ) : (
+              <>
+                <Power className="w-4 h-4" />
+                <span>{relayStatus ? "TRIP BREAKER" : "ENGAGE BREAKER"}</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
     </div>
   );
 }
