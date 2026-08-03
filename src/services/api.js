@@ -93,16 +93,24 @@ const updateSimulation = () => {
     }
   } else {
     currentFaultType = null;
-    simState.relay_status = true;
+    // DO NOT override simState.relay_status here. Allow user toggles to persist.
 
-    const baseVoltage = 228.0;
-    const wave = Math.sin(ticks * 0.1) * 4;
-    const noise = (Math.random() - 0.5) * 1.5;
-    simState.voltage = parseFloat((baseVoltage + wave + noise).toFixed(1));
+    if (simState.relay_status) {
+      const baseVoltage = 228.0;
+      const wave = Math.sin(ticks * 0.1) * 4;
+      const noise = (Math.random() - 0.5) * 1.5;
+      simState.voltage = parseFloat((baseVoltage + wave + noise).toFixed(1));
 
-    const baseCurrent = 0.9;
-    const currentNoise = (Math.random() - 0.5) * 0.3;
-    simState.current = parseFloat((baseCurrent + Math.sin(ticks * 0.05) * 0.4 + currentNoise).toFixed(2));
+      const baseCurrent = 0.9;
+      const currentNoise = (Math.random() - 0.5) * 0.3;
+      simState.current = parseFloat((baseCurrent + Math.sin(ticks * 0.05) * 0.4 + currentNoise).toFixed(2));
+    } else {
+      // Breaker is OFF: Voltage remains measurable on grid side, but current drops to 0.0A
+      const baseVoltage = 228.0;
+      const noise = (Math.random() - 0.5) * 1.5;
+      simState.voltage = parseFloat((baseVoltage + noise).toFixed(1));
+      simState.current = 0.0;
+    }
   }
 
   simState.status = getSystemStatus(simState.voltage, simState.current, simState.relay_status);
