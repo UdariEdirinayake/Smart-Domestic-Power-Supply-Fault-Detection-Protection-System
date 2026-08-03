@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchPowerData, toggleRelay as apiToggleRelay, triggerSimulatedFault, resetSimulatedSystem } from '../services/api';
 
-export const useRealTimeData = (initialMode = 'simulated', initialConnection = "https://domestic-wiring-project-default-rtdb.asia-southeast1.firebasedatabase.app/") => {
+export const useRealTimeData = (initialMode = 'firebase', initialConnection = "https://domestic-wiring-project-default-rtdb.asia-southeast1.firebasedatabase.app/") => {
   const [mode, setMode] = useState(initialMode); // 'simulated' | 'local' | 'firebase'
   const [connectionString, setConnectionString] = useState(initialConnection);
   const [currentData, setCurrentData] = useState(null);

@@ -18,7 +18,7 @@ export default function DashboardPage() {
     handleToggleRelay,
     triggerFault,
     restoreSystem
-  } = useRealTimeData('simulated', "https://domestic-wiring-project-default-rtdb.asia-southeast1.firebasedatabase.app/");
+  } = useRealTimeData('firebase', "https://domestic-wiring-project-default-rtdb.asia-southeast1.firebasedatabase.app/");
 
   const [showInjector, setShowInjector] = useState(true);
 
