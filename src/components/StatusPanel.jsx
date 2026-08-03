@@ -72,10 +72,10 @@ export default function StatusPanel({
   const Icon = activeConfig.icon;
 
   return (
-    <div className="engineering-card rounded-3xl p-6 border border-gray-800 flex flex-col md:flex-row gap-6 items-center bg-gray-950/30 w-full text-left">
+    <div className="flex flex-col gap-4 w-full text-left">
       
-      {/* Left: Active 6-Stage System Status Card */}
-      <div className={`flex-1 rounded-2xl border p-5 transition-all duration-500 ${activeConfig.color} ${activeConfig.glow} flex items-center justify-between gap-4 w-full`}>
+      {/* Top Card: Active 6-Stage System Status */}
+      <div className={`engineering-card rounded-3xl border p-6 transition-all duration-500 ${activeConfig.color} ${activeConfig.glow} flex items-center justify-between gap-4 w-full`}>
         <div className="flex items-center gap-3">
           <span className={`w-3.5 h-3.5 rounded-full ${activeConfig.bullet}`}></span>
           <span className="text-xl font-mono font-bold tracking-wider uppercase select-all">
@@ -90,22 +90,22 @@ export default function StatusPanel({
         </div>
       </div>
 
-      {/* Right: Breaker Control Switch Panel (Centering text and button vertically and horizontally) */}
-      <div className="w-full md:w-[280px] bg-gray-900/50 border border-gray-800 rounded-2xl p-5 flex flex-col justify-center items-center gap-4 text-center">
+      {/* Bottom Card: Breaker Control Switch Panel (Full Width row directly below Status) */}
+      <div className="engineering-card rounded-3xl border border-gray-800 p-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-950/30 w-full">
         
-        {/* Centered state text */}
-        <div className="font-mono text-xs tracking-wide">
-          <span className="text-gray-500 uppercase font-bold">BREAKER : </span>
+        {/* Left: Breaker Status */}
+        <div className="font-mono text-sm tracking-wide flex items-center gap-2">
+          <span className="text-gray-500 uppercase font-bold">BREAKER STATUS :</span>
           <span className={`font-bold ${relayStatus ? 'text-green-400' : 'text-red-400 animate-pulse'}`}>
             {relayStatus ? "CONNECTED" : "ISOLATED"}
           </span>
         </div>
 
-        {/* Centered button */}
+        {/* Right: Interactive Toggle Switch Button */}
         <button
           onClick={() => onToggleRelay(!relayStatus)}
           disabled={isConnecting}
-          className={`cursor-pointer w-full max-w-[200px] py-2.5 rounded-xl font-mono text-xs font-bold border flex items-center justify-center gap-2 transition-all active:scale-98 disabled:opacity-50 ${
+          className={`cursor-pointer min-w-[180px] py-2.5 px-6 rounded-xl font-mono text-xs font-bold border flex items-center justify-center gap-2 transition-all active:scale-98 disabled:opacity-50 ${
             relayStatus
               ? 'bg-red-950/20 hover:bg-red-900/20 text-red-400 border-red-500/20'
               : 'bg-green-950/20 hover:bg-green-900/20 text-green-400 border-green-500/20'
